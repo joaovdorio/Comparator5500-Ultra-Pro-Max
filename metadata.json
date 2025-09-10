@@ -1,0 +1,5 @@
+{
+  "name": "Comparator5500 Ultra Pro Max",
+  "description": "Uma aplicação web simples para validar códigos têm ISBN13, comparador de listas e verificador de estoque. Cole uma lista de códigos e o aplicativo os classificará nas categorias para fácil revisão.",
+  "requestFramePermissions": []
+}
