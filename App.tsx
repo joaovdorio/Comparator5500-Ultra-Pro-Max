@@ -416,7 +416,7 @@ const App: React.FC = () => {
 
         const newValidCodes: string[] = [];
         const newInvalidCodes: string[] = [];
-        const validationRegex = /^\d{13}$/;
+        const validationRegex = /^978\d{10}$/;
 
         codes.forEach(code => {
             if (validationRegex.test(code)) {
@@ -582,7 +582,7 @@ const App: React.FC = () => {
             case 'validator':
                 return {
                     title: 'Validador ISBN',
-                    description: 'Verifique quais códigos têm exatamente 13 dígitos.'
+                    description: 'Verifique quais códigos seguem o Padrão Internacional de Números de Livros (ISBN)'
                 };
             case 'comparator':
                 return {
