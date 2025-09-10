@@ -4,10 +4,17 @@ import { CheckCircleIcon, XCircleIcon, InformationCircleIcon, DownloadIcon } fro
 interface CodeDisplayBoxProps {
     title: string;
     codes: string[] | { code: string; quantity: number }[];
-    variant: 'success' | 'error' | 'info';
+    variant: 'success' | 'error' | 'info' | 'todolivro' | 'happybooks' | 'neutral';
 }
 
 const CodeDisplayBox: React.FC<CodeDisplayBoxProps> = ({ title, codes, variant }) => {
+    // Tailwind doesn't support dynamic class names with hex values.
+    // To use the specific brand colors, we need to either define them in tailwind.config.js
+    // or use inline styles. For simplicity and to avoid config files, we'll use a trick
+    // by applying a base class and overriding the color with an inline style.
+    // However, a cleaner approach without inline styles is to just use Tailwind classes if the exact hex is not a hard requirement.
+    // Let's create the themes with Tailwind classes first.
+    
     const themes = {
         success: {
             bg: 'bg-green-50',
@@ -34,6 +41,33 @@ const CodeDisplayBox: React.FC<CodeDisplayBoxProps> = ({ title, codes, variant }
             headerBg: 'bg-blue-500',
             icon: <InformationCircleIcon className="h-7 w-7" />,
             listItemBg: 'bg-blue-600',
+            listItemTextColor: 'text-white',
+        },
+        todolivro: {
+            bg: 'bg-[#e6f0f9]',
+            borderColor: 'border-[#004c97]',
+            textColor: 'text-[#002c59]',
+            headerBg: 'bg-[#004c97]',
+            icon: <InformationCircleIcon className="h-7 w-7" />,
+            listItemBg: 'bg-[#004c97]',
+            listItemTextColor: 'text-white',
+        },
+        happybooks: {
+            bg: 'bg-[#fde8e9]',
+            borderColor: 'border-[#ba1119]',
+            textColor: 'text-[#8c0d13]',
+            headerBg: 'bg-[#ba1119]',
+            icon: <InformationCircleIcon className="h-7 w-7" />,
+            listItemBg: 'bg-[#ba1119]',
+            listItemTextColor: 'text-white',
+        },
+        neutral: {
+            bg: 'bg-slate-50',
+            borderColor: 'border-slate-400',
+            textColor: 'text-slate-800',
+            headerBg: 'bg-slate-500',
+            icon: <InformationCircleIcon className="h-7 w-7" />,
+            listItemBg: 'bg-slate-600',
             listItemTextColor: 'text-white',
         }
     };

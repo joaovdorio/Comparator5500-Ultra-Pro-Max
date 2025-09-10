@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import CodeDisplayBox from './components/CodeDisplayBox';
 
-type Mode = 'validator' | 'comparator' | 'stock';
+type Mode = 'validator' | 'comparator' | 'stock' | 'identifier';
 
 // Helper to parse codes from a string.
 // Added a 'unique' flag to control deduplication.
@@ -45,6 +45,14 @@ const ModeToggle: React.FC<ModeToggleProps> = ({ mode, setMode }) => (
                 }`}
             >
                 Validador de Estoque
+            </button>
+            <button
+                onClick={() => setMode('identifier')}
+                className={`px-4 py-2 rounded-md font-semibold transition-colors duration-300 ${
+                    mode === 'identifier' ? 'bg-white text-indigo-600 shadow' : 'bg-transparent text-slate-600 hover:bg-slate-300/50'
+                }`}
+            >
+                Identificador
             </button>
         </div>
     </div>
@@ -290,6 +298,67 @@ const StockValidatorView: React.FC<StockValidatorViewProps> = ({
     </>
 );
 
+interface IdentifierViewProps {
+    skusInput: string;
+    setSkusInput: (value: string) => void;
+    handleIdentify: () => void;
+    handleClearIdentifier: () => void;
+    hasIdentified: boolean;
+    todolivroSkus: string[];
+    happyBooksSkus: string[];
+    unidentifiedSkus: string[];
+}
+
+const IdentifierView: React.FC<IdentifierViewProps> = ({
+    skusInput,
+    setSkusInput,
+    handleIdentify,
+    handleClearIdentifier,
+    hasIdentified,
+    todolivroSkus,
+    happyBooksSkus,
+    unidentifiedSkus,
+}) => (
+    <>
+        <div className="mb-8">
+            <label htmlFor="sku-input" className="block text-lg font-medium text-slate-700 mb-2">
+                Cole os SKUs Aqui
+            </label>
+            <textarea
+                id="sku-input"
+                value={skusInput}
+                onChange={(e) => setSkusInput(e.target.value)}
+                placeholder="Cole os SKUs separados por vírgulas, espaços ou novas linhas..."
+                className="w-full h-40 p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out resize-none bg-white text-blue-600"
+                aria-label="Entrada de SKUs para identificação"
+            />
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
+            <button
+                onClick={handleIdentify}
+                className="w-full sm:w-auto bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition transform hover:scale-105"
+            >
+                Identificar SKUs
+            </button>
+            <button
+                onClick={handleClearIdentifier}
+                className="w-full sm:w-auto bg-slate-500 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 transition transform hover:scale-105"
+            >
+                Limpar
+            </button>
+        </div>
+
+        {hasIdentified && (
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <CodeDisplayBox title="Todolivro" codes={todolivroSkus} variant="todolivro" />
+                <CodeDisplayBox title="Happy Books" codes={happyBooksSkus} variant="happybooks" />
+                <CodeDisplayBox title="Não Identificado" codes={unidentifiedSkus} variant="neutral" />
+            </div>
+        )}
+    </>
+);
+
 
 const App: React.FC = () => {
     const [mode, setMode] = useState<Mode>('validator');
@@ -315,6 +384,13 @@ const App: React.FC = () => {
     const [insufficientStock, setInsufficientStock] = useState<{ code: string; quantity: number }[]>([]);
     const [sufficientStock, setSufficientStock] = useState<{ code: string; quantity: number }[]>([]);
     const [hasValidatedStock, setHasValidatedStock] = useState<boolean>(false);
+
+    // State for Identifier
+    const [skusInput, setSkusInput] = useState<string>('');
+    const [todolivroSkus, setTodolivroSkus] = useState<string[]>([]);
+    const [happyBooksSkus, setHappyBooksSkus] = useState<string[]>([]);
+    const [unidentifiedSkus, setUnidentifiedSkus] = useState<string[]>([]);
+    const [hasIdentified, setHasIdentified] = useState<boolean>(false);
 
 
     // Validator Logic
@@ -442,6 +518,50 @@ const App: React.FC = () => {
         setHasValidatedStock(false);
     }, []);
     
+    // Identifier Logic
+    const handleIdentify = useCallback(() => {
+        const skus = parseCodes(skusInput, true);
+        if (skus.length === 0) {
+            setTodolivroSkus([]);
+            setHappyBooksSkus([]);
+            setUnidentifiedSkus([]);
+            setHasIdentified(true);
+            return;
+        }
+
+        const newTodolivro: string[] = [];
+        const newHappyBooks: string[] = [];
+        const newUnidentified: string[] = [];
+
+        skus.forEach(sku => {
+            // Todolivro: 7 digits, starts with 1
+            if (sku.length === 7 && sku.startsWith('1')) {
+                newTodolivro.push(sku);
+            }
+            // Happy Books: 6 digits, starts with 3
+            else if (sku.length === 6 && sku.startsWith('3')) {
+                newHappyBooks.push(sku);
+            }
+            // Unidentified
+            else {
+                newUnidentified.push(sku);
+            }
+        });
+        
+        setTodolivroSkus(newTodolivro);
+        setHappyBooksSkus(newHappyBooks);
+        setUnidentifiedSkus(newUnidentified);
+        setHasIdentified(true);
+    }, [skusInput]);
+
+    const handleClearIdentifier = useCallback(() => {
+        setSkusInput('');
+        setTodolivroSkus([]);
+        setHappyBooksSkus([]);
+        setUnidentifiedSkus([]);
+        setHasIdentified(false);
+    }, []);
+
     const getModeDetails = () => {
         switch (mode) {
             case 'validator':
@@ -458,6 +578,11 @@ const App: React.FC = () => {
                 return {
                     title: 'Validador de Estoque',
                     description: 'Encontre produtos com estoque abaixo do mínimo necessário.'
+                };
+            case 'identifier':
+                 return {
+                    title: 'Identificador',
+                    description: 'Identifique a qual marca pertence os SKUs.'
                 };
             default:
                 return { title: '', description: '' };
@@ -514,6 +639,16 @@ const App: React.FC = () => {
                         hasValidatedStock={hasValidatedStock}
                         insufficientStock={insufficientStock}
                         sufficientStock={sufficientStock}
+                    />}
+                    {mode === 'identifier' && <IdentifierView
+                        skusInput={skusInput}
+                        setSkusInput={setSkusInput}
+                        handleIdentify={handleIdentify}
+                        handleClearIdentifier={handleClearIdentifier}
+                        hasIdentified={hasIdentified}
+                        todolivroSkus={todolivroSkus}
+                        happyBooksSkus={happyBooksSkus}
+                        unidentifiedSkus={unidentifiedSkus}
                     />}
 
                 </div>
