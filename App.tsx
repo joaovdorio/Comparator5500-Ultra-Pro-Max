@@ -611,7 +611,8 @@ const App: React.FC = () => {
             <main className="w-full max-w-7xl mx-auto">
                 <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10">
                     <header className="text-center mb-8">
-                        <h1 className="text-4xl md:text-5xl font-bold text-slate-900">
+                        <h2 className="text-lg font-semibold text-indigo-500 tracking-wider uppercase">Comparator5500 Ultra Pro Max</h2>
+                        <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mt-1">
                            {title}
                         </h1>
                         <p className="text-slate-500 mt-2 text-lg">
