@@ -1,7 +1,25 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import CodeDisplayBox from './components/CodeDisplayBox';
 
 type Mode = 'validator' | 'comparator' | 'stock' | 'identifier';
+
+// Custom hook for debouncing
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+}
+
 
 // Helper to parse codes from a string.
 // Added a 'unique' flag to control deduplication.
@@ -301,7 +319,6 @@ const StockValidatorView: React.FC<StockValidatorViewProps> = ({
 interface IdentifierViewProps {
     skusInput: string;
     setSkusInput: (value: string) => void;
-    handleIdentify: () => void;
     handleClearIdentifier: () => void;
     hasIdentified: boolean;
     todolivroSkus: string[];
@@ -312,7 +329,6 @@ interface IdentifierViewProps {
 const IdentifierView: React.FC<IdentifierViewProps> = ({
     skusInput,
     setSkusInput,
-    handleIdentify,
     handleClearIdentifier,
     hasIdentified,
     todolivroSkus,
@@ -328,19 +344,13 @@ const IdentifierView: React.FC<IdentifierViewProps> = ({
                 id="sku-input"
                 value={skusInput}
                 onChange={(e) => setSkusInput(e.target.value)}
-                placeholder="Cole os SKUs separados por vírgulas, espaços ou novas linhas..."
+                placeholder="Cole os SKUs e os resultados aparecerão automaticamente..."
                 className="w-full h-40 p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out resize-none bg-white text-blue-600"
                 aria-label="Entrada de SKUs para identificação"
             />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
-            <button
-                onClick={handleIdentify}
-                className="w-full sm:w-auto bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition transform hover:scale-105"
-            >
-                Identificar SKUs
-            </button>
             <button
                 onClick={handleClearIdentifier}
                 className="w-full sm:w-auto bg-slate-500 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 transition transform hover:scale-105"
@@ -391,6 +401,7 @@ const App: React.FC = () => {
     const [happyBooksSkus, setHappyBooksSkus] = useState<string[]>([]);
     const [unidentifiedSkus, setUnidentifiedSkus] = useState<string[]>([]);
     const [hasIdentified, setHasIdentified] = useState<boolean>(false);
+    const debouncedSkusInput = useDebounce(skusInput, 400);
 
 
     // Validator Logic
@@ -519,15 +530,26 @@ const App: React.FC = () => {
     }, []);
     
     // Identifier Logic
-    const handleIdentify = useCallback(() => {
-        const skus = parseCodes(skusInput, true);
-        if (skus.length === 0) {
-            setTodolivroSkus([]);
-            setHappyBooksSkus([]);
-            setUnidentifiedSkus([]);
-            setHasIdentified(true);
+    const handleClearIdentifier = useCallback(() => {
+        setSkusInput('');
+        setTodolivroSkus([]);
+        setHappyBooksSkus([]);
+        setUnidentifiedSkus([]);
+        setHasIdentified(false);
+    }, []);
+
+    useEffect(() => {
+        if (mode !== 'identifier') return;
+
+        if (debouncedSkusInput.trim() === '') {
+            // If user clears the input, reset the state completely
+            if (hasIdentified) {
+                 handleClearIdentifier();
+            }
             return;
         }
+
+        const skus = parseCodes(debouncedSkusInput, true);
 
         const newTodolivro: string[] = [];
         const newHappyBooks: string[] = [];
@@ -552,15 +574,8 @@ const App: React.FC = () => {
         setHappyBooksSkus(newHappyBooks);
         setUnidentifiedSkus(newUnidentified);
         setHasIdentified(true);
-    }, [skusInput]);
+    }, [debouncedSkusInput, mode, hasIdentified, handleClearIdentifier]);
 
-    const handleClearIdentifier = useCallback(() => {
-        setSkusInput('');
-        setTodolivroSkus([]);
-        setHappyBooksSkus([]);
-        setUnidentifiedSkus([]);
-        setHasIdentified(false);
-    }, []);
 
     const getModeDetails = () => {
         switch (mode) {
@@ -643,7 +658,6 @@ const App: React.FC = () => {
                     {mode === 'identifier' && <IdentifierView
                         skusInput={skusInput}
                         setSkusInput={setSkusInput}
-                        handleIdentify={handleIdentify}
                         handleClearIdentifier={handleClearIdentifier}
                         hasIdentified={hasIdentified}
                         todolivroSkus={todolivroSkus}
