@@ -84,6 +84,7 @@ interface ValidatorViewProps {
     hasValidated: boolean;
     validCodes: string[];
     invalidCodes: string[];
+    duplicatedCodes: { code: string; value: number }[];
 }
 
 const ValidatorView: React.FC<ValidatorViewProps> = ({
@@ -93,7 +94,8 @@ const ValidatorView: React.FC<ValidatorViewProps> = ({
     handleClearValidator,
     hasValidated,
     validCodes,
-    invalidCodes
+    invalidCodes,
+    duplicatedCodes,
 }) => (
     <>
         <div className="mb-8">
@@ -126,9 +128,10 @@ const ValidatorView: React.FC<ValidatorViewProps> = ({
         </div>
 
         {hasValidated && (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <CodeDisplayBox title="Códigos Válidos" codes={validCodes} variant="success" />
                 <CodeDisplayBox title="Códigos Inválidos" codes={invalidCodes} variant="error" />
+                <CodeDisplayBox title="Códigos Duplicados" codes={duplicatedCodes} variant="info" itemLabel="Repetições" />
             </div>
         )}
     </>
@@ -224,8 +227,8 @@ interface StockValidatorViewProps {
     handleStockValidation: () => void;
     handleClearStockValidator: () => void;
     hasValidatedStock: boolean;
-    insufficientStock: { code: string; quantity: number }[];
-    sufficientStock: { code: string; quantity: number }[];
+    insufficientStock: { code: string; value: number }[];
+    sufficientStock: { code: string; value: number }[];
 }
 
 const StockValidatorView: React.FC<StockValidatorViewProps> = ({
@@ -305,11 +308,13 @@ const StockValidatorView: React.FC<StockValidatorViewProps> = ({
                     title={`Produtos com menos de ${minStock} de estoque`} 
                     codes={insufficientStock} 
                     variant="error" 
+                    itemLabel="Estoque"
                 />
                  <CodeDisplayBox 
                     title={`Produtos com ${minStock} ou mais de estoque`} 
                     codes={sufficientStock} 
                     variant="success" 
+                    itemLabel="Estoque"
                 />
             </div>
         )}
@@ -377,6 +382,7 @@ const App: React.FC = () => {
     const [inputValue, setInputValue] = useState<string>('');
     const [validCodes, setValidCodes] = useState<string[]>([]);
     const [invalidCodes, setInvalidCodes] = useState<string[]>([]);
+    const [duplicatedCodes, setDuplicatedCodes] = useState<{ code: string; value: number }[]>([]);
     const [hasValidated, setHasValidated] = useState<boolean>(false);
 
     // State for Comparator
@@ -391,8 +397,8 @@ const App: React.FC = () => {
     const [stockCodes, setStockCodes] = useState<string>('');
     const [stockQuantities, setStockQuantities] = useState<string>('');
     const [minStock, setMinStock] = useState<string>('1');
-    const [insufficientStock, setInsufficientStock] = useState<{ code: string; quantity: number }[]>([]);
-    const [sufficientStock, setSufficientStock] = useState<{ code: string; quantity: number }[]>([]);
+    const [insufficientStock, setInsufficientStock] = useState<{ code: string; value: number }[]>([]);
+    const [sufficientStock, setSufficientStock] = useState<{ code: string; value: number }[]>([]);
     const [hasValidatedStock, setHasValidatedStock] = useState<boolean>(false);
 
     // State for Identifier
@@ -406,19 +412,34 @@ const App: React.FC = () => {
 
     // Validator Logic
     const handleValidation = useCallback(() => {
-        const codes = parseCodes(inputValue, true); // Use unique parsing
-        if (codes.length === 0) {
+        const allCodes = parseCodes(inputValue, false);
+        const uniqueCodes = parseCodes(inputValue, true);
+
+        if (allCodes.length === 0) {
             setValidCodes([]);
             setInvalidCodes([]);
+            setDuplicatedCodes([]);
             setHasValidated(true);
             return;
         }
+
+        // Find duplicates
+        const codeCounts = new Map<string, number>();
+        allCodes.forEach(code => {
+            codeCounts.set(code, (codeCounts.get(code) || 0) + 1);
+        });
+        const newDuplicatedCodes: { code: string; value: number }[] = [];
+        codeCounts.forEach((count, code) => {
+            if (count > 1) {
+                newDuplicatedCodes.push({ code, value: count });
+            }
+        });
 
         const newValidCodes: string[] = [];
         const newInvalidCodes: string[] = [];
         const validationRegex = /^978\d{10}$/;
 
-        codes.forEach(code => {
+        uniqueCodes.forEach(code => {
             if (validationRegex.test(code)) {
                 newValidCodes.push(code);
             } else {
@@ -428,6 +449,7 @@ const App: React.FC = () => {
 
         setValidCodes(newValidCodes);
         setInvalidCodes(newInvalidCodes);
+        setDuplicatedCodes(newDuplicatedCodes);
         setHasValidated(true);
     }, [inputValue]);
 
@@ -435,6 +457,7 @@ const App: React.FC = () => {
         setInputValue('');
         setValidCodes([]);
         setInvalidCodes([]);
+        setDuplicatedCodes([]);
         setHasValidated(false);
     }, []);
 
@@ -501,16 +524,16 @@ const App: React.FC = () => {
             return;
         }
 
-        const newInsufficient: { code: string; quantity: number }[] = [];
-        const newSufficient: { code: string; quantity: number }[] = [];
+        const newInsufficient: { code: string; value: number }[] = [];
+        const newSufficient: { code: string; value: number }[] = [];
         const len = Math.min(codes.length, quantities.length);
 
         for (let i = 0; i < len; i++) {
              if (!isNaN(quantities[i])) {
                 if (quantities[i] < minimum) {
-                    newInsufficient.push({ code: codes[i], quantity: quantities[i] });
+                    newInsufficient.push({ code: codes[i], value: quantities[i] });
                 } else {
-                    newSufficient.push({ code: codes[i], quantity: quantities[i] });
+                    newSufficient.push({ code: codes[i], value: quantities[i] });
                 }
             }
         }
@@ -630,6 +653,7 @@ const App: React.FC = () => {
                         hasValidated={hasValidated}
                         validCodes={validCodes}
                         invalidCodes={invalidCodes}
+                        duplicatedCodes={duplicatedCodes}
                     />}
                     {mode === 'comparator' && <ComparatorView
                         listA={listA}

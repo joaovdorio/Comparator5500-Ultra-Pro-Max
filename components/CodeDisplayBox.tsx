@@ -3,11 +3,12 @@ import { CheckCircleIcon, XCircleIcon, InformationCircleIcon, DownloadIcon } fro
 
 interface CodeDisplayBoxProps {
     title: string;
-    codes: string[] | { code: string; quantity: number }[];
+    codes: string[] | { code: string; value: number }[];
     variant: 'success' | 'error' | 'info' | 'todolivro' | 'happybooks' | 'neutral';
+    itemLabel?: string;
 }
 
-const CodeDisplayBox: React.FC<CodeDisplayBoxProps> = ({ title, codes, variant }) => {
+const CodeDisplayBox: React.FC<CodeDisplayBoxProps> = ({ title, codes, variant, itemLabel }) => {
     // Tailwind doesn't support dynamic class names with hex values.
     // To use the specific brand colors, we need to either define them in tailwind.config.js
     // or use inline styles. For simplicity and to avoid config files, we'll use a trick
@@ -77,13 +78,13 @@ const CodeDisplayBox: React.FC<CodeDisplayBoxProps> = ({ title, codes, variant }
     const handleDownload = () => {
         if (codes.length === 0) return;
 
-        const isObjectArray = (arr: any[]): arr is { code: string; quantity: number }[] => {
-            return arr.length > 0 && typeof arr[0] === 'object' && 'code' in arr[0] && 'quantity' in arr[0];
+        const isObjectArray = (arr: any[]): arr is { code: string; value: number }[] => {
+            return arr.length > 0 && typeof arr[0] === 'object' && 'code' in arr[0] && 'value' in arr[0];
         };
 
         let content = '';
         if (isObjectArray(codes)) {
-            content = codes.map(item => `${item.code}\tEstoque: ${item.quantity}`).join('\n');
+            content = codes.map(item => `${item.code}${itemLabel ? `\t${itemLabel}: ${item.value}` : ''}`).join('\n');
         } else {
             content = (codes as string[]).join('\n');
         }
@@ -133,8 +134,8 @@ const CodeDisplayBox: React.FC<CodeDisplayBoxProps> = ({ title, codes, variant }
                     <ul className="space-y-2">
                         {codes.map((item, index) => (
                             <li key={index} className={`font-mono ${theme.listItemBg} ${theme.listItemTextColor} p-2 rounded-md shadow-sm break-all flex justify-between items-center`}>
-                                {typeof item === 'object' && 'code' in item && 'quantity' in item
-                                    ? <><span>{item.code}</span><span className="text-xs opacity-80 pl-4">Estoque: {item.quantity}</span></>
+                                {typeof item === 'object' && 'code' in item && 'value' in item
+                                    ? <><span>{item.code}</span>{itemLabel && <span className="text-xs opacity-80 pl-4">{itemLabel}: {item.value}</span>}</>
                                     : <span>{item}</span>
                                 }
                             </li>
